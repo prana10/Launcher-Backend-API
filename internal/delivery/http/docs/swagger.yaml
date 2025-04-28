@@ -1,0 +1,333 @@
+basePath: /api/v1
+definitions:
+  entity.OTA:
+    properties:
+      app_id:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      release_notes:
+        type: string
+      updated_at:
+        type: string
+      url:
+        type: string
+      version_code:
+        type: integer
+      version_name:
+        type: string
+    type: object
+  handle.OTACreateRequest:
+    description: Request body for creating OTA update
+    properties:
+      app_id:
+        example: com.yapindo.launcher
+        type: string
+      release_notes:
+        example: Initial release with basic features
+        type: string
+      url:
+        example: https://storage.example.com/apps/launcher-1.0.0.apk
+        type: string
+      version_code:
+        example: 100
+        type: integer
+      version_name:
+        example: 1.0.0
+        type: string
+    required:
+    - app_id
+    - url
+    - version_code
+    - version_name
+    type: object
+  handle.OTAUpdateRequest:
+    description: Request body for updating OTA update
+    properties:
+      app_id:
+        example: com.yapindo.launcher
+        type: string
+      release_notes:
+        example: Bug fixes and performance improvements
+        type: string
+      url:
+        example: https://storage.example.com/apps/launcher-1.0.1.apk
+        type: string
+      version_code:
+        example: 101
+        type: integer
+      version_name:
+        example: 1.0.1
+        type: string
+    required:
+    - app_id
+    - url
+    - version_code
+    - version_name
+    type: object
+  response.Meta:
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+      pagination:
+        $ref: '#/definitions/response.Pagination'
+      status:
+        type: string
+    type: object
+  response.Pagination:
+    properties:
+      count:
+        type: integer
+      has_next:
+        type: boolean
+      has_prev:
+        type: boolean
+      next_cursor:
+        type: string
+      prev_cursor:
+        type: string
+      total:
+        type: integer
+    type: object
+  response.Response:
+    properties:
+      data: {}
+      meta:
+        $ref: '#/definitions/response.Meta'
+    type: object
+host: localhost:8080
+info:
+  contact:
+    name: Yapindo Team
+  description: Backend API for OTA updates management for Yapindo Launcher applications
+  title: Yapindo Launcher Backend API
+  version: "1.0"
+paths:
+  /otas:
+    get:
+      consumes:
+      - application/json
+      description: Get all OTA updates with pagination
+      parameters:
+      - description: Cursor for pagination
+        in: query
+        name: cursor
+        type: string
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OTAs retrieved successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/entity.OTA'
+                  type: array
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Get all OTA updates
+      tags:
+      - OTA
+    post:
+      consumes:
+      - application/json
+      description: Create a new Over-The-Air update for an application
+      parameters:
+      - description: OTA update information
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handle.OTACreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: OTA created successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/entity.OTA'
+              type: object
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Create a new OTA update
+      tags:
+      - OTA
+  /otas/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an OTA update by its ID
+      parameters:
+      - description: OTA ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OTA deleted successfully
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: ID is required
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: OTA not found
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Delete an OTA update
+      tags:
+      - OTA
+    get:
+      consumes:
+      - application/json
+      description: Get detailed information about an OTA update by its ID
+      parameters:
+      - description: OTA ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OTA retrieved successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/entity.OTA'
+              type: object
+        "400":
+          description: ID is required
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: OTA not found
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Get OTA update by ID
+      tags:
+      - OTA
+    put:
+      consumes:
+      - application/json
+      description: Update an existing OTA update by its ID
+      parameters:
+      - description: OTA ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: OTA update information
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handle.OTAUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OTA updated successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/entity.OTA'
+              type: object
+        "400":
+          description: Invalid request body or ID is required
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: OTA not found
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Update an OTA update
+      tags:
+      - OTA
+  /otas/app/{appId}:
+    get:
+      consumes:
+      - application/json
+      description: Get all OTA updates for a specific application ID with pagination
+      parameters:
+      - description: Application ID
+        in: path
+        name: appId
+        required: true
+        type: string
+      - description: Cursor for pagination
+        in: query
+        name: cursor
+        type: string
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OTAs retrieved successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/entity.OTA'
+                  type: array
+              type: object
+        "400":
+          description: App ID is required
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Get OTA updates by App ID
+      tags:
+      - OTA
+schemes:
+- http
+- https
+swagger: "2.0"

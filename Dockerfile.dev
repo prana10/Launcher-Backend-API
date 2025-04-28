@@ -1,0 +1,24 @@
+FROM golang:1.24-alpine
+
+WORKDIR /app
+
+# Menginstall air untuk live reload
+RUN go install github.com/cosmtrek/air@latest
+
+# Copy go mod dan sum files
+COPY go.mod go.sum ./
+
+# Download semua dependencies
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Install migrate untuk database migrations
+RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+
+# Expose port
+EXPOSE 8080
+
+# Command untuk menjalankan dengan hot reload
+CMD ["air", "-c", ".air.toml"] 

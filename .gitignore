@@ -1,0 +1,6 @@
+tmp/
+.idea/
+.vscode/
+*.env
+.env
+air_errors.log
