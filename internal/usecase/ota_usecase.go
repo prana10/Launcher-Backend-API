@@ -35,23 +35,18 @@ func (uc *OTAUseCase) CreateOTA(ctx context.Context, ota entity.OTA) (entity.OTA
 	return uc.otaRepo.Create(ctx, ota)
 }
 
-func (uc *OTAUseCase) GetOTAByID(ctx context.Context, id string) (entity.OTA, error) {
-	if id == "" {
-		return entity.OTA{}, fmt.Errorf("ID is required")
+func (uc *OTAUseCase) GetOTA(ctx context.Context, id string, appID string) (entity.OTA, string, error) {
+	// Check if both id and appID are provided
+	if id != "" && appID != "" {
+		return nil, "", fmt.Errorf("cannot provide both id and appID, choose one")
 	}
-	return uc.otaRepo.GetByID(ctx, id)
-}
+	
+	// Check if at least one of id or appID is provided
+	if id == "" && appID == "" {
+		return nil, "", fmt.Errorf("must provide either id or appID")
+	}
 
-func (uc *OTAUseCase) GetOTAsByAppID(ctx context.Context, appID string, cursor string, limit int) ([]entity.OTA, string, error) {
-	if appID == "" {
-		return nil, "", fmt.Errorf("app ID is required")
-	}
-	
-	if limit <= 0 {
-		limit = 10
-	}
-	
-	return uc.otaRepo.GetByAppID(ctx, appID, cursor, limit)
+	return uc.otaRepo.Get(ctx, id, appID)
 }
 
 func (uc *OTAUseCase) GetAllOTAs(ctx context.Context, cursor string, limit int) ([]entity.OTA, string, int64, error) {

@@ -41,8 +41,7 @@ func (h *OTAHandler) RegisterRoutes(router fiber.Router) {
 
 	otaRouter.Post("/", h.CreateOTA)
 	otaRouter.Get("/", h.GetAllOTAs)
-	otaRouter.Get("/:id", h.GetOTAByID)
-	otaRouter.Get("/app/:appId", h.GetOTAsByAppID)
+	otaRouter.Get("/get", h.GetOTA)
 	otaRouter.Put("/:id", h.UpdateOTA)
 	otaRouter.Delete("/:id", h.DeleteOTA)
 }
@@ -69,40 +68,16 @@ func (h *OTAHandler) CreateOTA(c *fiber.Ctx) error {
 	return response.CreatedResponse(c, "OTA created successfully", createdOTA)
 }
 
-func (h *OTAHandler) GetOTAByID(c *fiber.Ctx) error {
-	id := c.Params("id")
-	if id == "" {
-		return response.BadRequestResponse(c, "ID is required")
-	}
+func (h *OTAHandler) GetOTA(c *fiber.Ctx) error {
+	id := c.Query("id", "")
+	appID := c.Query("app_id", "")
 
-	ota, err := h.otaUseCase.GetOTAByID(c.Context(), id)
+	ota, err := h.otaUseCase.GetOTA(c.Context(), id, appID)
 	if err != nil {
-		return response.NotFoundResponse(c, "OTA not found")
+		return response.ErrorResponse(c, fiber.StatusBadRequest, err.Error())
 	}
 
 	return response.SuccessResponse(c, "OTA retrieved successfully", ota)
-}
-
-
-func (h *OTAHandler) GetOTAsByAppID(c *fiber.Ctx) error {
-	appID := c.Params("appId")
-	cursor := c.Query("cursor", "")
-	limitStr := c.Query("limit", "10")
-
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil || limit <= 0 {
-		limit = 10
-	}
-
-	otas, nextCursor, err := h.otaUseCase.GetOTAsByAppID(c.Context(), appID, cursor, limit)
-	if err != nil {
-		return response.ErrorResponse(c, fiber.StatusInternalServerError, "Failed to get OTAs: "+err.Error())
-	}
-
-	hasNext := nextCursor != ""
-	hasPrev := cursor != ""
-
-	return response.PaginatedResponse(c, "OTAs retrieved successfully", otas, hasNext, hasPrev, nextCursor, cursor, 0, len(otas))
 }
 
 func (h *OTAHandler) GetAllOTAs(c *fiber.Ctx) error {
@@ -136,8 +111,8 @@ func (h *OTAHandler) UpdateOTA(c *fiber.Ctx) error {
 		return response.BadRequestResponse(c, "Invalid request body")
 	}
 
-	_, err := h.otaUseCase.GetOTAByID(c.Context(), id)
-	if err != nil {
+	otas, _, err := h.otaUseCase.GetOTA(c.Context(), id, "", "", 0)
+	if err != nil || len(otas) == 0 {
 		return response.NotFoundResponse(c, "OTA not found")
 	}
 

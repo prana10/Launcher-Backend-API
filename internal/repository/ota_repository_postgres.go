@@ -72,60 +72,62 @@ func (r *PostgresOTARepository) Create(ctx context.Context, ota entity.OTA) (ent
 	return ota, nil
 }
 
-func (r *PostgresOTARepository) GetByID(ctx context.Context, id string) (entity.OTA, error) {
-	query := `
-		SELECT id, app_id, version_name, version_code, release_notes, url, created_at, updated_at
-		FROM otas
-		WHERE id = $1
-	`
-
-	var ota entity.OTA
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&ota.ID,
-		&ota.AppID,
-		&ota.VersionName,
-		&ota.VersionCode,
-		&ota.ReleaseNotes,
-		&ota.URL,
-		&ota.CreatedAt,
-		&ota.UpdatedAt,
-	)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return entity.OTA{}, fmt.Errorf("ota not found: %w", err)
-		}
-		return entity.OTA{}, fmt.Errorf("failed to get ota: %w", err)
+func (r *PostgresOTARepository) Get(ctx context.Context, id string, appID string) (entity.OTA, string, error) {
+	// Check if both id and appID are provided
+	if id != "" && appID != "" {
+		return nil, "", fmt.Errorf("cannot provide both id and appID, choose one")
 	}
 
-	return ota, nil
-}
+	// Check if neither id nor appID are provided
+	if id == "" && appID == "" {
+		return nil, "", fmt.Errorf("must provide either id or appID")
+	}
 
-func (r *PostgresOTARepository) GetByAppID(ctx context.Context, appID string, cursor string, limit int) ([]entity.OTA, string, error) {
+	// If id is provided, get a single OTA
+	if id != "" {
+		query := `
+			SELECT id, app_id, version_name, version_code, release_notes, url, created_at, updated_at
+			FROM otas
+			WHERE id = $1
+		`
+
+		var ota entity.OTA
+		err := r.db.QueryRowContext(ctx, query, id).Scan(
+			&ota.ID,
+			&ota.AppID,
+			&ota.VersionName,
+			&ota.VersionCode,
+			&ota.ReleaseNotes,
+			&ota.URL,
+			&ota.CreatedAt,
+			&ota.UpdatedAt,
+		)
+
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, "", fmt.Errorf("ota not found: %w", err)
+			}
+			return nil, "", fmt.Errorf("failed to get ota: %w", err)
+		}
+
+		return ota, "", nil
+	}
+
+	// If appID is provided, get multiple OTAs
 	query := `
 		SELECT id, app_id, version_name, version_code, release_notes, url, created_at, updated_at
 		FROM otas
 		WHERE app_id = $1
 	`
 
-	params := []interface{}{appID}
-	if cursor != "" {
-		query += " AND id > $2"
-		params = append(params, cursor)
-	}
-
-	query += " ORDER BY id ASC LIMIT $" + fmt.Sprintf("%d", len(params)+1)
-	params = append(params, limit+1)
-
-	rows, err := r.db.QueryContext(ctx, query, params...)
+	rows, err := r.db.QueryContext(ctx, query, appID)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to get otas by app id: %w", err)
 	}
 	defer rows.Close()
 
-	var otas []entity.OTA
+	var ota entity.OTA
 	for rows.Next() {
-		var ota entity.OTA
 		if err := rows.Scan(
 			&ota.ID,
 			&ota.AppID,
@@ -138,16 +140,9 @@ func (r *PostgresOTARepository) GetByAppID(ctx context.Context, appID string, cu
 		); err != nil {
 			return nil, "", fmt.Errorf("failed to scan ota row: %w", err)
 		}
-		otas = append(otas, ota)
 	}
 
-	var nextCursor string
-	if len(otas) > limit {
-		nextCursor = otas[limit-1].ID
-		otas = otas[:limit]
-	}
-
-	return otas, nextCursor, nil
+	return ota, "", nil
 }
 
 func (r *PostgresOTARepository) GetAll(ctx context.Context, cursor string, limit int) ([]entity.OTA, string, int64, error) {
